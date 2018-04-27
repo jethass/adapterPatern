@@ -1,0 +1,49 @@
+//=========================Factory=========================================/
+abstract class AbstractFactory
+{
+   abstract public function createText(string $content): Text;
+}
+
+class JsonFactory extends AbstractFactory
+{
+  public function createText(string $content): Text
+  {
+    return new JsonText($content);
+  }
+}
+
+class HtmlFactory extends AbstractFactory
+{
+  public function createText(string $content): Text
+  {
+    return new HtmlText($content);
+  }
+}
+/=====================class que le factory l'isstancie===========================/
+abstract class Text
+{
+  private $text;
+  public function __construct(string $text)
+  {
+    $this->text = $text;
+  }
+}
+
+class JsonText extends Text
+{
+   //
+}
+
+class HtmlText extends Text
+{
+   //
+}
+
+//============================utilisation================================================//
+$factory = new HtmlFactory();
+$text = $factory->createText('foobar');
+$this->assertInstanceOf(HtmlText::class, $text);
+
+$factory = new JsonFactory();
+$text = $factory->createText('foobar');
+$this->assertInstanceOf(JsonText::class, $text);
