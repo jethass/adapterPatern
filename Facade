@@ -1,0 +1,131 @@
+composer requirement:
+"require": {
+        "ipd/mail": "^1.0",
+        }
+        
+--------------------------------------------------------------------------------------------------------------------------------------        
+
+<?php
+
+interface MailerInterface
+{
+    /** @return array */
+    public function send($idTemplate, array $recipients, array $variables);
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+use IPD\Mail\Message;
+/**
+ * Class MailJetDecorator
+ */
+class MailJetDecorator implements MailerInterface
+{
+    /** @var \IPD\Mail\Mailer */
+    protected $mailer;
+
+    /**
+     * MailJetDecorator constructor.
+     * @param \IPD\Mail\Mailer $mailer
+     */
+    public function __construct(\IPD\Mail\Mailer $mailer)
+    {
+        $this->mailer = $mailer;
+    }
+
+    /**
+     * @param int $idTemplate
+     * @param array $recipients
+     * @param array $variables
+     *
+     * @return array
+     * @throws \IPD\Mail\Exception\Transport
+     */
+    public function send($idTemplate, array $recipients, array $variables)
+    {
+        $message = new Message();
+        $message->setTemplateId($idTemplate);
+
+        foreach ($recipients as $to){
+            $message->addTo($to);
+        }
+
+        foreach ($variables as $key => $value){
+            $message->addVariable($key, $value);
+        }
+
+        $this->mailer->addMessage($message);
+
+        $response = $this->mailer->send();
+
+        $sendStatus = [];
+        foreach ($recipients as $recipient) {
+            $result = $response->getData();
+            $result['email'] = $recipient;
+            $result['responseStatusCode'] = $response->getStatus();
+            $sendStatus[] = $result;
+        }
+
+        return $sendStatus;
+    }
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Class Mailer
+ */
+class Mailer
+{
+    /** @var MailerInterface */
+    protected $mailer;
+
+    /**
+     * Mailer constructor.
+     * @param MailerInterface $mailer
+     */
+    public function __construct(MailerInterface $mailer)
+    {
+        $this->mailer = $mailer;
+    }
+
+    /**
+     * Send a mail
+     *
+     * @param int|string $idTemplate     The template id
+     * @param array $recipients         Array of recipient
+     * @param array $dynEntries         Array of dynamic variables of the template
+     *
+     * @return array                    Array containing response message and status
+     */
+    public function send($idTemplate, array $recipients = [], array $dynEntries = [])
+    {
+        return $this->mailer->send($idTemplate, $recipients, $dynEntries);
+    }
+}
+
+
+-----------------------------------utilisation-----------------------------------------------------------------------------------------
+$container['mailer'] = function ($c) {
+
+    $config = array(
+        "Key" => '',
+        "Secret" => '',
+        "DefaultMessage" => array(
+            "TemplateErrorReporting" => array("Email" => "", "Name" => ""),
+            "TemplateErrorDeliver" => true,
+            "From" => array(
+                "Email" => "",
+                "Name" => ""
+            ),
+            "ReplyTo" => array(
+                "Email" => ""
+            )
+        )
+    );
+
+    $transport = new \IPD\Mail\Transport\MailJet($config);
+    $mailJetMailer = new \IPD\Mail\Mailer($transport);
+
+     return new Mailer(new MailJetDecorator($mailJetMailer));
+};
